@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="text-center mb-5">
+    <h1 class="display-4 fw-bold">🛡️ Women's Safety Platform</h1>
+    <p class="lead text-muted">
+        Stay Safe. Stay Connected. Stay Empowered.
+    </p>
+</div>
+
+<div class="row g-4">
+
+    <div class="col-md-4">
+        <div class="card shadow h-100">
+            <div class="card-body text-center">
+
+                <h1>👥</h1>
+
+                <h4>Emergency Contacts</h4>
+
+                <p>
+                    Add, edit and manage emergency contacts.
+                </p>
+
+                <a href="/contacts_page" class="btn btn-primary">
+                    Open
+                </a>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow h-100">
+            <div class="card-body text-center">
+
+                <h1>🚨</h1>
+
+                <h4>SOS</h4>
+
+                <p>
+                    Send an SOS alert with your live location.
+                </p>
+
+                <a href="/sos_page" class="btn btn-danger">
+                    Open
+                </a>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow h-100">
+            <div class="card-body text-center">
+
+                <h1>📜</h1>
+
+                <h4>SOS History</h4>
+
+                <p>
+                    View all previously triggered SOS alerts.
+                </p>
+
+                <a href="/history_page" class="btn btn-success">
+                    Open
+                </a>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
