@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Women Safety AI Assistant</title>
+    <style>
+        * { box-sizing: border-box; font-family: Arial, sans-serif; }
+        body { background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .chat-container { width: 100%; max-width: 600px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; height: 85vh; }
+        .chat-header { background: #d9534f; color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 1.2rem; }
+        .chat-box { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .message { max-width: 75%; padding: 10px 14px; border-radius: 8px; font-size: 0.95rem; line-height: 1.4; }
+        .user-message { background: #007bff; color: white; align-self: flex-end; }
+        .bot-message { background: #e9ecef; color: #333; align-self: flex-start; }
+        .emergency-alert { background: #ffcccc; color: #b30000; font-weight: bold; border: 1px solid #ff9999; }
+        .input-area { display: flex; padding: 10px; border-top: 1px solid #ddd; background: #fff; }
+        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; outline: none; }
+        button { background: #d9534f; color: white; border: none; padding: 10px 15px; margin-left: 8px; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #c9302c; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">🛡️ Women Safety AI Assistant</div>
+    <div class="chat-box" id="chatBox">
+        <div class="message bot-message">Hello! How can I assist you today? If you are in danger, type "help" or "emergency" immediately.</div>
+    </div>
+    <div class="input-area">
+        <input type="text" id="userInput" placeholder="Type your message here..." onkeypress="handleKeyPress(event)">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script>
+    async function sendMessage() {
+        const input = document.getElementById("userInput");
+        const message = input.value.trim();
+        if (!message) return;
+
+        appendMessage(message, "user-message");
+        input.value = "";
+
+        try {
+            const response = await fetch("/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: message })
+            });
+            
+            const data = await response.json();
+            
+            if (data.is_emergency) {
+                appendMessage("🚨 EMERGENCY DETECTED: Sending help alerts!", "bot-message emergency-alert");
+            } else {
+                appendMessage(data.response, "bot-message");
+            }
+        } catch (error) {
+            appendMessage("Unable to reach server. Please try again.", "bot-message");
+        }
+    }
+
+    function appendMessage(text, className) {
+        const chatBox = document.getElementById("chatBox");
+        const msgDiv = document.createElement("div");
+        msgDiv.className = `message ${className}`;
+        msgDiv.innerText = text;
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function handleKeyPress(event) {
+        if (event.key === "Enter") sendMessage();
+    }
+</script>
+
+</body>
+</html>
