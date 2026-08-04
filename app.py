@@ -1,23 +1,30 @@
 import os
-from flask import Flask, request, jsonify
+import sqlite3
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+
+# Import blueprint from your routes folder
+from routes.chat_routes import chat_bp
 
 # Load secret environment variables from .env
 load_dotenv()
 
 app = Flask(__name__)
 
-# This setup handles the CORS security checks robustly so Chrome won't drop the connection
+# Register routes blueprint
+app.register_blueprint(chat_bp)
+
+# Enable CORS for security checks across browsers
 CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"]}})
 
-# Initialize the Gemini client (looks for GEMINI_API_KEY in your .env)
+# Initialize the Gemini client (uses GEMINI_API_KEY from .env)
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # 1. EMERGENCY KEYWORD INTERCEPTOR
-EMERGENCY_KEYWORDS = ["help", "danger","following","followed", "stalk", "attack", "police", "unsafe", "emergency", "run"]
+EMERGENCY_KEYWORDS = ["help", "danger", "following", "followed", "stalk", "attack", "police", "unsafe", "emergency", "run"]
 
 EMERGENCY_RESPONSE = {
     "is_emergency": True,
@@ -35,9 +42,43 @@ Your tone should feel like a supportive, grounded peer—never panicked, never c
 Keep your text concise and scannable. Use bolding and bullet points for safety instructions so they are easy to read in stressful moments.
 """
 
+# Database logging helpers
+def log_chat_to_db(user_msg, bot_msg):
+    try:
+        conn = sqlite3.connect('database/women_safety.db')
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO chat_history (user_message, bot_response) VALUES (?, ?)",
+            (user_msg, str(bot_msg))
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print("Database chat log error:", e)
+
+def log_emergency_to_db(keyword):
+    try:
+        conn = sqlite3.connect('database/women_safety.db')
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO emergency_alerts (keyword_triggered) VALUES (?)",
+            (keyword,)
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print("Database emergency log error:", e)
+
+# 3. ROUTES
+@app.route('/')
+def home():
+    """Renders the frontend HTML chatbot interface."""
+    return render_template('index.html')
+
 @app.route('/chat', methods=['POST', 'OPTIONS'])
+@app.route('/api/chat', methods=['POST', 'OPTIONS'])
 def chat_endpoint():
-    # Automatically handle the browser preflight request without crashing
+    # Automatically handle browser preflight request
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
 
@@ -45,29 +86,36 @@ def chat_endpoint():
     if not data:
         return jsonify({"error": "No data received"}), 400
         
-    user_message = data.get("message", "").strip().lower()
+    raw_message = data.get("message", "").strip()
+    user_message = raw_message.lower()
 
     if not user_message:
         return jsonify({"error": "Message content cannot be blank"}), 400
 
     # Safety Check: Intercept immediate physical danger keywords
     if any(keyword in user_message for keyword in EMERGENCY_KEYWORDS):
+        log_emergency_to_db(raw_message)
+        log_chat_to_db(raw_message, EMERGENCY_RESPONSE["message"])
         return jsonify(EMERGENCY_RESPONSE)
 
     # Standard Response Process: Route to AI
     try:
         response = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents=user_message,
+            contents=raw_message,
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 temperature=0.6,
             )
         )
         
+        bot_text = response.text
+        log_chat_to_db(raw_message, bot_text)
+
         return jsonify({
             "is_emergency": False,
-            "message": response.text
+            "response": bot_text,
+            "message": bot_text
         })
 
     except Exception as e:
